@@ -17,6 +17,5 @@ jobs:
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
         with:
-          name: HP1136XQX-FusionWrt-Installer
+          name: HP1136XQX-USB-Print-Server-Installer
           path: dist/*.pkg
-

@@ -7,8 +7,8 @@ SRC_DIR="$BUILD_DIR/src"
 PAYLOAD="$BUILD_DIR/pkgroot"
 PKG_SCRIPTS="$BUILD_DIR/pkg-scripts"
 DIST="$REPO_ROOT/dist"
-VERSION="${VERSION:-1.0.0}"
-PKG_ID="${PKG_ID:-com.neil.hp1136xqx.fusionwrt}"
+VERSION="${VERSION:-1.0.1}"
+PKG_ID="${PKG_ID:-com.neil.hp1136xqx.usbprintserver}"
 FOO2ZJS_URL="${FOO2ZJS_URL:-https://deb.debian.org/debian/pool/main/f/foo2zjs/foo2zjs_20200505dfsg0.orig.tar.xz}"
 FOO2ZJS_TARBALL="$BUILD_DIR/foo2zjs.orig.tar.xz"
 FOO2ZJS_DIR="$SRC_DIR/foo2zjs-20200505dfsg0"
@@ -102,6 +102,6 @@ pkgbuild \
   --identifier "$PKG_ID" \
   --version "$VERSION" \
   --install-location / \
-  "$DIST/HP1136XQX-FusionWrt-Installer-$VERSION.pkg"
+  "$DIST/HP1136XQX-USB-Print-Server-Installer-$VERSION.pkg"
 
-echo "$DIST/HP1136XQX-FusionWrt-Installer-$VERSION.pkg"
+echo "$DIST/HP1136XQX-USB-Print-Server-Installer-$VERSION.pkg"

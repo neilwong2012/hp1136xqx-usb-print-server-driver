@@ -1,7 +1,8 @@
 #!/bin/sh
 set -eu
 
-CONFIG="/Library/Preferences/hp1136xqx-fusionwrt.conf"
+CONFIG="/Library/Preferences/hp1136xqx-usb-print-server.conf"
+LEGACY_CONFIG="/Library/Preferences/hp1136xqx-fusionwrt.conf"
 PPD="/Library/Printers/PPDs/Contents/Resources/HP1136XQX.ppd"
 CUPS_FILES="/private/etc/cups/cups-files.conf"
 
@@ -14,6 +15,9 @@ RELAX_SANDBOX=1
 if [ -f "$CONFIG" ]; then
   # shellcheck disable=SC1090
   . "$CONFIG"
+elif [ -f "$LEGACY_CONFIG" ]; then
+  # shellcheck disable=SC1090
+  . "$LEGACY_CONFIG"
 fi
 
 usage() {
@@ -128,8 +132,8 @@ URI="socket://${HOST}:${PORT}"
   -E \
   -v "$URI" \
   -P "$PPD" \
-  -D "HP LaserJet M1136 via FusionWrt XQX" \
-  -L "FusionWrt ${HOST}:${PORT}" \
+  -D "HP LaserJet M1136 via USB Print Server XQX" \
+  -L "USB Print Server ${HOST}:${PORT}" \
   -o PageSize=A4 \
   -o Resolution=600x600dpi \
   -o printer-is-shared=false
@@ -155,4 +159,3 @@ mv "$tmp" "$CONFIG"
 /bin/launchctl kickstart -k system/org.cups.cupsd >/dev/null 2>&1 || true
 
 echo "Configured ${QUEUE} at ${URI}"
-
