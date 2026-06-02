@@ -1,0 +1,22 @@
+name: Build macOS installer
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: brew install ghostscript gnu-sed
+      - name: Build package
+        run: ./scripts/build-pkg.sh
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HP1136XQX-FusionWrt-Installer
+          path: dist/*.pkg
+

@@ -1,0 +1,158 @@
+#!/bin/sh
+set -eu
+
+CONFIG="/Library/Preferences/hp1136xqx-fusionwrt.conf"
+PPD="/Library/Printers/PPDs/Contents/Resources/HP1136XQX.ppd"
+CUPS_FILES="/private/etc/cups/cups-files.conf"
+
+HOST="${HP1136XQX_HOST:-192.168.31.119}"
+PORT="${HP1136XQX_PORT:-9100}"
+QUEUE="${HP1136XQX_QUEUE:-HP1136XQX}"
+SET_DEFAULT=1
+RELAX_SANDBOX=1
+
+if [ -f "$CONFIG" ]; then
+  # shellcheck disable=SC1090
+  . "$CONFIG"
+fi
+
+usage() {
+  cat <<'EOF'
+Usage: hp1136xqx-setup [options]
+
+Options:
+  --host HOST              Router or print-server IP/hostname
+  --port PORT              p910nd/JetDirect port, usually 9100
+  --queue NAME             CUPS queue name, default HP1136XQX
+  --set-default            Set this queue as the default printer
+  --no-default             Do not change the default printer
+  --relax-sandbox          Set CUPS Sandboxing relaxed, default
+  --no-relax-sandbox       Leave CUPS Sandboxing unchanged
+  -h, --help               Show this help
+
+Example:
+  sudo hp1136xqx-setup --host 192.168.31.119 --port 9100
+EOF
+}
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --host)
+      HOST="${2:?missing host}"
+      shift 2
+      ;;
+    --port)
+      PORT="${2:?missing port}"
+      shift 2
+      ;;
+    --queue)
+      QUEUE="${2:?missing queue name}"
+      shift 2
+      ;;
+    --set-default)
+      SET_DEFAULT=1
+      shift
+      ;;
+    --no-default)
+      SET_DEFAULT=0
+      shift
+      ;;
+    --relax-sandbox)
+      RELAX_SANDBOX=1
+      shift
+      ;;
+    --no-relax-sandbox)
+      RELAX_SANDBOX=0
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+case "$HOST" in
+  "") echo "Host is required" >&2; exit 2 ;;
+esac
+
+case "$PORT" in
+  ""|*[!0-9]*) echo "Port must be a number" >&2; exit 2 ;;
+esac
+
+if [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; then
+  echo "Port must be between 1 and 65535" >&2
+  exit 2
+fi
+
+case "$QUEUE" in
+  ""|*[!A-Za-z0-9_.-]*)
+    echo "Queue name may only contain letters, numbers, dot, underscore, and dash" >&2
+    exit 2
+    ;;
+esac
+
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Run with sudo." >&2
+  exit 1
+fi
+
+if [ ! -f "$PPD" ]; then
+  echo "Missing PPD: $PPD" >&2
+  exit 1
+fi
+
+if [ "$RELAX_SANDBOX" -eq 1 ] && [ -f "$CUPS_FILES" ]; then
+  if ! grep -Eq '^[[:space:]]*Sandboxing[[:space:]]+relaxed([[:space:]]|$)' "$CUPS_FILES"; then
+    backup="$CUPS_FILES.hp1136xqx-backup-$(date +%Y%m%d%H%M%S)"
+    cp "$CUPS_FILES" "$backup"
+    if grep -Eq '^[[:space:]]*Sandboxing[[:space:]]+' "$CUPS_FILES"; then
+      /usr/bin/sed -i '' -E 's/^[[:space:]]*Sandboxing[[:space:]]+.*/Sandboxing relaxed/' "$CUPS_FILES"
+    else
+      printf '\nSandboxing relaxed\n' >> "$CUPS_FILES"
+    fi
+  fi
+fi
+
+URI="socket://${HOST}:${PORT}"
+
+/usr/bin/cancel -a "$QUEUE" >/dev/null 2>&1 || true
+
+/usr/sbin/lpadmin \
+  -p "$QUEUE" \
+  -E \
+  -v "$URI" \
+  -P "$PPD" \
+  -D "HP LaserJet M1136 via FusionWrt XQX" \
+  -L "FusionWrt ${HOST}:${PORT}" \
+  -o PageSize=A4 \
+  -o Resolution=600x600dpi \
+  -o printer-is-shared=false
+
+/usr/sbin/cupsaccept "$QUEUE" >/dev/null 2>&1 || true
+/usr/sbin/cupsenable "$QUEUE" >/dev/null 2>&1 || true
+
+if [ "$SET_DEFAULT" -eq 1 ]; then
+  /usr/bin/lpoptions -d "$QUEUE" >/dev/null 2>&1 || true
+fi
+
+mkdir -p "$(dirname "$CONFIG")"
+tmp="${CONFIG}.$$"
+{
+  printf 'HOST=%s\n' "$HOST"
+  printf 'PORT=%s\n' "$PORT"
+  printf 'QUEUE=%s\n' "$QUEUE"
+} > "$tmp"
+chown root:wheel "$tmp"
+chmod 644 "$tmp"
+mv "$tmp" "$CONFIG"
+
+/bin/launchctl kickstart -k system/org.cups.cupsd >/dev/null 2>&1 || true
+
+echo "Configured ${QUEUE} at ${URI}"
+

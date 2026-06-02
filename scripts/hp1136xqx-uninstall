@@ -1,0 +1,37 @@
+#!/bin/sh
+set -eu
+
+CONFIG="/Library/Preferences/hp1136xqx-fusionwrt.conf"
+QUEUE="${HP1136XQX_QUEUE:-HP1136XQX}"
+
+if [ -f "$CONFIG" ]; then
+  # shellcheck disable=SC1090
+  . "$CONFIG"
+fi
+
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Run with sudo." >&2
+  exit 1
+fi
+
+/usr/bin/cancel -a "$QUEUE" >/dev/null 2>&1 || true
+/usr/sbin/lpadmin -x "$QUEUE" >/dev/null 2>&1 || true
+
+rm -f /usr/libexec/cups/filter/hp1136xqx-filter
+rm -f /usr/libexec/cups/filter/foo2xqx
+rm -f /usr/libexec/cups/filter/foo2xqx-wrapper
+rm -f /usr/libexec/cups/filter/foo2zjs-pstops
+rm -f /usr/libexec/cups/filter/gsed
+rm -f /usr/libexec/cups/filter/gs
+rm -rf /usr/libexec/cups/filter/hp1136libs
+rm -rf /usr/libexec/cups/filter/ghostscript
+rm -f /Library/Printers/PPDs/Contents/Resources/HP1136XQX.ppd
+rm -f /usr/local/bin/hp1136xqx-setup
+rm -f /usr/local/bin/hp1136xqx-uninstall
+rm -f "$CONFIG"
+
+/bin/launchctl kickstart -k system/org.cups.cupsd >/dev/null 2>&1 || true
+
+echo "Removed ${QUEUE} and HP1136XQX driver files."
+echo "CUPS sandbox backups, if created, are left under /private/etc/cups/." >&2
+

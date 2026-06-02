@@ -1,0 +1,44 @@
+#!/bin/sh
+set -eu
+
+FILTER_DIR="/usr/libexec/cups/filter"
+
+set_mode() {
+  path="$1"
+  mode="$2"
+  if [ -e "$path" ]; then
+    chown root:wheel "$path" 2>/dev/null || true
+    chmod "$mode" "$path" 2>/dev/null || true
+    xattr -c "$path" 2>/dev/null || true
+  fi
+}
+
+set_mode "$FILTER_DIR/hp1136xqx-filter" 755
+set_mode "$FILTER_DIR/foo2xqx" 755
+set_mode "$FILTER_DIR/foo2xqx-wrapper" 755
+set_mode "$FILTER_DIR/foo2zjs-pstops" 755
+set_mode "$FILTER_DIR/gsed" 755
+set_mode "$FILTER_DIR/gs" 755
+
+if [ -d "$FILTER_DIR/hp1136libs" ]; then
+  chown -R root:wheel "$FILTER_DIR/hp1136libs" 2>/dev/null || true
+  chmod -R go+rX "$FILTER_DIR/hp1136libs" 2>/dev/null || true
+  xattr -cr "$FILTER_DIR/hp1136libs" 2>/dev/null || true
+fi
+
+if [ -d "$FILTER_DIR/ghostscript" ]; then
+  chown -R root:wheel "$FILTER_DIR/ghostscript" 2>/dev/null || true
+  chmod -R go+rX "$FILTER_DIR/ghostscript" 2>/dev/null || true
+  xattr -cr "$FILTER_DIR/ghostscript" 2>/dev/null || true
+fi
+
+if [ -x /usr/local/bin/hp1136xqx-setup ]; then
+  /usr/local/bin/hp1136xqx-setup \
+    --host "${HP1136XQX_HOST:-192.168.31.119}" \
+    --port "${HP1136XQX_PORT:-9100}" \
+    --queue "${HP1136XQX_QUEUE:-HP1136XQX}" \
+    --set-default \
+    --relax-sandbox
+fi
+
+exit 0

@@ -1,0 +1,73 @@
+#!/bin/sh
+set -eu
+
+PATH="/usr/libexec/cups/filter:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+export PATH
+export GSBIN="/usr/libexec/cups/filter/gs"
+export GS_LIB="/usr/libexec/cups/filter/ghostscript/Resource/Init:/usr/libexec/cups/filter/ghostscript/lib:/usr/libexec/cups/filter/ghostscript/Resource/Font:/usr/libexec/cups/filter/ghostscript/fonts"
+
+JOB_ID="${1:-0}"
+USER_NAME="${2:-unknown}"
+JOB_TITLE="${3:-untitled}"
+COPIES="${4:-1}"
+OPTIONS="${5:-}"
+INPUT_FILE="${6:-}"
+
+case "$COPIES" in
+  ''|*[!0-9]*) COPIES=1 ;;
+esac
+
+tmpdir="$(mktemp -d "${TMPDIR:-/private/var/spool/cups/tmp}/hp1136xqx.XXXXXX")"
+cleanup() {
+  rm -rf "$tmpdir"
+}
+trap cleanup EXIT INT TERM
+
+input="$INPUT_FILE"
+if [ -z "$input" ]; then
+  input="$tmpdir/input"
+  cat > "$input"
+fi
+
+paper=9
+case "$OPTIONS" in
+  *PageSize=Letter*|*media=Letter*) paper=1 ;;
+  *PageSize=Legal*|*media=Legal*) paper=5 ;;
+  *PageSize=Executive*|*media=Executive*) paper=7 ;;
+  *PageSize=A5*|*media=A5*) paper=11 ;;
+  *PageSize=B5*|*media=B5*) paper=13 ;;
+  *PageSize=A4*|*media=A4*) paper=9 ;;
+esac
+
+res=600x600
+case "$OPTIONS" in
+  *Resolution=1200x600*|*Resolution=1200x600dpi*) res=1200x600 ;;
+esac
+
+duplex=1
+case "$OPTIONS" in
+  *Duplex=DuplexNoTumble*|*sides=two-sided-long-edge*) duplex=2 ;;
+  *Duplex=DuplexTumble*|*sides=two-sided-short-edge*) duplex=3 ;;
+esac
+
+ps="$input"
+magic="$(dd if="$input" bs=4 count=1 2>/dev/null || true)"
+case "$magic" in
+  %PDF)
+    ps="$tmpdir/input.ps"
+    "$GSBIN" \
+      -q -dBATCH -dNOPAUSE -dSAFER \
+      -sDEVICE=ps2write \
+      -sOutputFile="$ps" \
+      "$input"
+    ;;
+esac
+
+logger -t hp1136xqx-filter "job=$JOB_ID user=$USER_NAME title=$JOB_TITLE copies=$COPIES paper=$paper res=$res duplex=$duplex"
+
+exec /usr/libexec/cups/filter/foo2xqx-wrapper \
+  -p "$paper" \
+  -r "$res" \
+  -n "$COPIES" \
+  -d "$duplex" \
+  "$ps"
