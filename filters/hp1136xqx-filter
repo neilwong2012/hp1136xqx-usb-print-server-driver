@@ -50,6 +50,17 @@ case "$OPTIONS" in
   *Duplex=DuplexTumble*|*sides=two-sided-short-edge*) duplex=3 ;;
 esac
 
+toner_mode=normal
+density=3
+save_toner=
+case "$OPTIONS" in
+  *HPTonerMode=Light*|*HPTonerSave=True*|*TonerSave=True*)
+    toner_mode=light
+    density=1
+    save_toner=-t
+    ;;
+esac
+
 ps="$input"
 magic="$(dd if="$input" bs=4 count=1 2>/dev/null || true)"
 case "$magic" in
@@ -63,11 +74,13 @@ case "$magic" in
     ;;
 esac
 
-logger -t hp1136xqx-filter "job=$JOB_ID user=$USER_NAME title=$JOB_TITLE copies=$COPIES paper=$paper res=$res duplex=$duplex"
+logger -t hp1136xqx-filter "job=$JOB_ID user=$USER_NAME title=$JOB_TITLE copies=$COPIES paper=$paper res=$res duplex=$duplex toner=$toner_mode density=$density"
 
 exec /usr/libexec/cups/filter/foo2xqx-wrapper \
   -p "$paper" \
   -r "$res" \
   -n "$COPIES" \
   -d "$duplex" \
+  -T "$density" \
+  $save_toner \
   "$ps"

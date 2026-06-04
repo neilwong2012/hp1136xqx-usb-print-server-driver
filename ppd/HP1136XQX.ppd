@@ -82,6 +82,13 @@
 *Duplex DuplexTumble/Short-Edge Binding: ""
 *CloseUI: *Duplex
 
+*OpenUI *HPTonerMode/Toner Mode: PickOne
+*OrderDependency: 40 AnySetup *HPTonerMode
+*DefaultHPTonerMode: Normal
+*HPTonerMode Normal/Normal: ""
+*HPTonerMode Light/Light image mode: ""
+*CloseUI: *HPTonerMode
+
 *DefaultFont: Courier
 *Font Courier: Standard "(001.004)" Standard ROM
 *Font Helvetica: Standard "(001.006)" Standard ROM

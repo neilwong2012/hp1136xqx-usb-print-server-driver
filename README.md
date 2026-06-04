@@ -59,7 +59,7 @@ USB 打印服务器侧通常需要：
 
 从 GitHub Releases 下载最新版 `.pkg` 并安装：
 
-https://github.com/neilwong2012/hp1136xqx-usb-print-server-driver/releases
+https://github.com/neilwong2012/hp1136xqx-fusionwrt-driver/releases
 
 默认安装后会创建：
 
@@ -108,6 +108,26 @@ lpstat -p HP1136XQX -v HP1136XQX
 
 ```sh
 echo test | lp -d HP1136XQX
+```
+
+### 图片或扫描件打印发黑
+
+微信图片、拍照扫描件、灰底截图如果打印出来太黑，可以使用浅色省墨模式：
+
+```sh
+lp -d HP1136XQX -o HPTonerMode=Light image.jpg
+```
+
+如果希望这个队列默认都用浅色模式：
+
+```sh
+sudo lpadmin -p HP1136XQX -o HPTonerMode=Light
+```
+
+恢复普通模式：
+
+```sh
+sudo lpadmin -p HP1136XQX -o HPTonerMode=Normal
 ```
 
 ### 从源码构建
@@ -192,7 +212,7 @@ This project is not suitable for:
 
 Download the latest `.pkg` from GitHub Releases:
 
-https://github.com/neilwong2012/hp1136xqx-usb-print-server-driver/releases
+https://github.com/neilwong2012/hp1136xqx-fusionwrt-driver/releases
 
 By default, the installer creates:
 
@@ -242,6 +262,27 @@ Print a small test:
 
 ```sh
 echo test | lp -d HP1136XQX
+```
+
+### Dark Photo Or Scan Output
+
+For WeChat images, photographed documents, scans, or gray-background screenshots
+that print too dark, use light toner mode:
+
+```sh
+lp -d HP1136XQX -o HPTonerMode=Light image.jpg
+```
+
+To make light mode the queue default:
+
+```sh
+sudo lpadmin -p HP1136XQX -o HPTonerMode=Light
+```
+
+To restore normal mode:
+
+```sh
+sudo lpadmin -p HP1136XQX -o HPTonerMode=Normal
 ```
 
 ### Build From Source
