@@ -32,6 +32,7 @@ rm -rf /usr/libexec/cups/filter/ghostscript
 rm -f /Library/Printers/PPDs/Contents/Resources/HP1136XQX.ppd
 rm -f /usr/local/bin/hp1136xqx-setup
 rm -f /usr/local/bin/hp1136xqx-uninstall
+rm -f /usr/local/bin/hp1136xqx-print-image
 rm -f "$CONFIG"
 rm -f "$LEGACY_CONFIG"
 

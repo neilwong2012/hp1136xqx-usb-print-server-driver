@@ -2,6 +2,7 @@
 set -eu
 
 FILTER_DIR="/usr/libexec/cups/filter"
+BIN_DIR="/usr/local/bin"
 
 set_mode() {
   path="$1"
@@ -19,6 +20,9 @@ set_mode "$FILTER_DIR/foo2xqx-wrapper" 755
 set_mode "$FILTER_DIR/foo2zjs-pstops" 755
 set_mode "$FILTER_DIR/gsed" 755
 set_mode "$FILTER_DIR/gs" 755
+set_mode "$BIN_DIR/hp1136xqx-setup" 755
+set_mode "$BIN_DIR/hp1136xqx-uninstall" 755
+set_mode "$BIN_DIR/hp1136xqx-print-image" 755
 
 if [ -d "$FILTER_DIR/hp1136libs" ]; then
   chown -R root:wheel "$FILTER_DIR/hp1136libs" 2>/dev/null || true

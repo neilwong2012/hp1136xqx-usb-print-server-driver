@@ -7,11 +7,14 @@ SRC_DIR="$BUILD_DIR/src"
 PAYLOAD="$BUILD_DIR/pkgroot"
 PKG_SCRIPTS="$BUILD_DIR/pkg-scripts"
 DIST="$REPO_ROOT/dist"
-VERSION="${VERSION:-1.0.1}"
+VERSION="${VERSION:-1.0.3}"
 PKG_ID="${PKG_ID:-com.neil.hp1136xqx.usbprintserver}"
 FOO2ZJS_URL="${FOO2ZJS_URL:-https://deb.debian.org/debian/pool/main/f/foo2zjs/foo2zjs_20200505dfsg0.orig.tar.xz}"
 FOO2ZJS_TARBALL="$BUILD_DIR/foo2zjs.orig.tar.xz"
 FOO2ZJS_DIR="$SRC_DIR/foo2zjs-20200505dfsg0"
+
+export COPYFILE_DISABLE=1
+export COPY_EXTENDED_ATTRIBUTES_DISABLE=1
 
 need() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -65,6 +68,7 @@ install -m 755 "$REPO_ROOT/filters/hp1136xqx-filter" "$PAYLOAD/usr/libexec/cups/
 install -m 644 "$REPO_ROOT/ppd/HP1136XQX.ppd" "$PAYLOAD/Library/Printers/PPDs/Contents/Resources/HP1136XQX.ppd"
 install -m 755 "$REPO_ROOT/scripts/hp1136xqx-setup" "$PAYLOAD/usr/local/bin/hp1136xqx-setup"
 install -m 755 "$REPO_ROOT/scripts/hp1136xqx-uninstall" "$PAYLOAD/usr/local/bin/hp1136xqx-uninstall"
+install -m 755 "$REPO_ROOT/scripts/hp1136xqx-print-image" "$PAYLOAD/usr/local/bin/hp1136xqx-print-image"
 
 "$REPO_ROOT/scripts/bundle_ghostscript.py" \
   --gs "$GS_PREFIX/bin/gs" \
@@ -89,16 +93,20 @@ chmod 755 "$PAYLOAD/usr/libexec/cups/filter/hp1136xqx-filter" \
   "$PAYLOAD/usr/libexec/cups/filter/gsed" \
   "$PAYLOAD/usr/libexec/cups/filter/gs" \
   "$PAYLOAD/usr/local/bin/hp1136xqx-setup" \
-  "$PAYLOAD/usr/local/bin/hp1136xqx-uninstall"
+  "$PAYLOAD/usr/local/bin/hp1136xqx-uninstall" \
+  "$PAYLOAD/usr/local/bin/hp1136xqx-print-image"
 find "$PAYLOAD/usr/libexec/cups/filter/hp1136libs" -type f -exec chmod 755 {} +
 xattr -cr "$PAYLOAD" "$PKG_SCRIPTS" 2>/dev/null || true
 find "$PAYLOAD" -name '.DS_Store' -delete
 find "$PAYLOAD" -name '._*' -delete
 
-export COPYFILE_DISABLE=1
 pkgbuild \
   --root "$PAYLOAD" \
   --scripts "$PKG_SCRIPTS" \
+  --filter '(^|/)\.DS_Store$' \
+  --filter '(^|/)CVS($|/)' \
+  --filter '(^|/)\.svn($|/)' \
+  --filter '(^|/)\._' \
   --identifier "$PKG_ID" \
   --version "$VERSION" \
   --install-location / \

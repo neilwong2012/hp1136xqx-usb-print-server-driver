@@ -1,0 +1,161 @@
+#!/bin/sh
+set -eu
+
+QUEUE="${HP1136XQX_QUEUE:-HP1136XQX}"
+MODE="fill"
+BLACK_POINT="35%"
+WHITE_POINT="82%"
+THRESHOLD="70%"
+OUTPUT=""
+PRINT=1
+
+usage() {
+  cat <<'EOF'
+Usage: hp1136xqx-print-image [options] image-file
+
+Clean gray photo/scan backgrounds, place the image on an A4 page, and print it.
+
+Options:
+  --queue NAME             CUPS queue, default HP1136XQX
+  --fill                   Fill A4 and crop if needed, default
+  --fit                    Fit the whole image on A4, may leave margins
+  --black-point VALUE      ImageMagick level black point, default 35%
+  --white-point VALUE      ImageMagick level white point, default 82%
+  --threshold VALUE        Threshold for bilevel output, default 70%
+  --output FILE.pdf        Save the generated A4 PDF
+  --no-print               Generate PDF only
+  -h, --help               Show this help
+
+Examples:
+  hp1136xqx-print-image image.jpg
+  hp1136xqx-print-image --fit image.jpg
+  hp1136xqx-print-image --white-point 86% image.jpg
+EOF
+}
+
+pct() {
+  case "$1" in
+    *%) printf '%s\n' "$1" ;;
+    *) printf '%s%%\n' "$1" ;;
+  esac
+}
+
+INPUT=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --queue)
+      QUEUE="${2:?missing queue name}"
+      shift 2
+      ;;
+    --fill)
+      MODE="fill"
+      shift
+      ;;
+    --fit)
+      MODE="fit"
+      shift
+      ;;
+    --black-point)
+      BLACK_POINT="$(pct "${2:?missing black point}")"
+      shift 2
+      ;;
+    --white-point)
+      WHITE_POINT="$(pct "${2:?missing white point}")"
+      shift 2
+      ;;
+    --threshold)
+      THRESHOLD="$(pct "${2:?missing threshold}")"
+      shift 2
+      ;;
+    --output)
+      OUTPUT="${2:?missing output path}"
+      shift 2
+      ;;
+    --no-print)
+      PRINT=0
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -*)
+      echo "Unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+    *)
+      if [ -n "$INPUT" ]; then
+        echo "Only one input image is supported." >&2
+        exit 2
+      fi
+      INPUT="$1"
+      shift
+      ;;
+  esac
+done
+
+if [ -z "$INPUT" ]; then
+  usage >&2
+  exit 2
+fi
+
+if [ ! -f "$INPUT" ]; then
+  echo "Input file not found: $INPUT" >&2
+  exit 1
+fi
+
+if command -v magick >/dev/null 2>&1; then
+  MAGICK="$(command -v magick)"
+elif [ -x /opt/homebrew/bin/magick ]; then
+  MAGICK="/opt/homebrew/bin/magick"
+elif [ -x /usr/local/bin/magick ]; then
+  MAGICK="/usr/local/bin/magick"
+else
+  echo "ImageMagick is required. Install it with: brew install imagemagick" >&2
+  exit 1
+fi
+
+tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/hp1136xqx-image.XXXXXX")"
+cleanup() {
+  rm -rf "$tmpdir"
+}
+trap cleanup EXIT INT TERM
+
+png="$tmpdir/a4-clean.png"
+pdf="$tmpdir/a4-clean.pdf"
+
+case "$MODE" in
+  fill)
+    resize="2480x3508^"
+    ;;
+  fit)
+    resize="2480x3508>"
+    ;;
+  *)
+    echo "Internal error: unknown mode $MODE" >&2
+    exit 1
+    ;;
+esac
+
+"$MAGICK" "$INPUT" \
+  -auto-orient -strip -colorspace Gray \
+  -level "${BLACK_POINT},${WHITE_POINT}" \
+  -threshold "$THRESHOLD" \
+  -type Bilevel \
+  -resize "$resize" \
+  -gravity center -background white -extent 2480x3508 \
+  "$png"
+
+/usr/bin/sips -s dpiWidth 300 -s dpiHeight 300 "$png" >/dev/null
+"$MAGICK" "$png" "$pdf"
+
+if [ -n "$OUTPUT" ]; then
+  mkdir -p "$(dirname "$OUTPUT")"
+  cp "$pdf" "$OUTPUT"
+  echo "Wrote $OUTPUT"
+fi
+
+if [ "$PRINT" -eq 1 ]; then
+  /usr/bin/lp -d "$QUEUE" "$pdf"
+fi

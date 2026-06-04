@@ -59,7 +59,7 @@ USB 打印服务器侧通常需要：
 
 从 GitHub Releases 下载最新版 `.pkg` 并安装：
 
-https://github.com/neilwong2012/hp1136xqx-fusionwrt-driver/releases
+https://github.com/neilwong2012/hp1136xqx-usb-print-server-driver/releases
 
 默认安装后会创建：
 
@@ -112,7 +112,44 @@ echo test | lp -d HP1136XQX
 
 ### 图片或扫描件打印发黑
 
-微信图片、拍照扫描件、灰底截图如果打印出来太黑，可以使用浅色省墨模式：
+微信图片、拍照扫描件、灰底截图如果直接打印出来发黑，通常不是路由器或
+`p910nd` 的问题，而是灰色纸面背景被 1-bit 激光打印半色调转成了密集黑点。
+
+推荐先安装 ImageMagick：
+
+```sh
+brew install imagemagick
+```
+
+然后用安装包附带的图片预处理命令打印：
+
+```sh
+hp1136xqx-print-image /path/to/image.jpg
+```
+
+这个命令会清理灰底、转成黑白、按 A4 300dpi 生成 PDF，再发送到
+`HP1136XQX` 队列。默认使用 `--fill` 铺满 A4，比例会保持正常，但边缘可能会被
+裁切；M1136 这类激光打印机本身不能真正无边距打印，纸边仍会保留硬件不可打印区。
+
+如果希望完整保留图片内容、接受纸边留白：
+
+```sh
+hp1136xqx-print-image --fit /path/to/image.jpg
+```
+
+只生成清理后的 PDF、不立刻打印：
+
+```sh
+hp1136xqx-print-image --no-print --output cleaned-a4.pdf /path/to/image.jpg
+```
+
+如果文字仍偏浅或背景仍偏黑，可以微调阈值：
+
+```sh
+hp1136xqx-print-image --white-point 86% --threshold 72% /path/to/image.jpg
+```
+
+对于普通 PDF 或文本作业，如果只是整体墨量偏重，可以使用浅色省墨模式：
 
 ```sh
 lp -d HP1136XQX -o HPTonerMode=Light image.jpg
@@ -136,6 +173,12 @@ sudo lpadmin -p HP1136XQX -o HPTonerMode=Normal
 
 ```sh
 brew install ghostscript gnu-sed
+```
+
+如果要使用 `hp1136xqx-print-image` 图片预处理命令，还需要：
+
+```sh
+brew install imagemagick
 ```
 
 构建安装包：
@@ -212,7 +255,7 @@ This project is not suitable for:
 
 Download the latest `.pkg` from GitHub Releases:
 
-https://github.com/neilwong2012/hp1136xqx-fusionwrt-driver/releases
+https://github.com/neilwong2012/hp1136xqx-usb-print-server-driver/releases
 
 By default, the installer creates:
 
@@ -267,7 +310,48 @@ echo test | lp -d HP1136XQX
 ### Dark Photo Or Scan Output
 
 For WeChat images, photographed documents, scans, or gray-background screenshots
-that print too dark, use light toner mode:
+that print too dark, the router and `p910nd` are usually not the problem. The
+gray paper background is being converted into dense 1-bit laser halftone dots.
+
+Install ImageMagick first:
+
+```sh
+brew install imagemagick
+```
+
+Then print through the bundled image preprocessor:
+
+```sh
+hp1136xqx-print-image /path/to/image.jpg
+```
+
+This command cleans the gray background, converts the image to black and white,
+places it on an A4 300 dpi page, generates a PDF, and sends it to the
+`HP1136XQX` queue. It uses `--fill` by default, which fills A4 while preserving
+proportions and may crop the edges. The M1136 cannot do true borderless printing,
+so the printer's hardware margins still apply.
+
+To preserve the whole image and allow page margins:
+
+```sh
+hp1136xqx-print-image --fit /path/to/image.jpg
+```
+
+To generate the cleaned PDF without printing:
+
+```sh
+hp1136xqx-print-image --no-print --output cleaned-a4.pdf /path/to/image.jpg
+```
+
+If the text is too light or the background is still too dark, adjust the
+threshold:
+
+```sh
+hp1136xqx-print-image --white-point 86% --threshold 72% /path/to/image.jpg
+```
+
+For normal PDFs or text jobs that only need lower toner density, use light toner
+mode:
 
 ```sh
 lp -d HP1136XQX -o HPTonerMode=Light image.jpg
@@ -291,6 +375,12 @@ Requirements:
 
 ```sh
 brew install ghostscript gnu-sed
+```
+
+For the optional `hp1136xqx-print-image` helper:
+
+```sh
+brew install imagemagick
 ```
 
 Build:
